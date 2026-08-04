@@ -1088,9 +1088,9 @@ Respond concisely, accurately, and empathetically in 2-4 sentences. Include a pr
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running at http://0.0.0.0:${PORT}`);
-  });
+  app.listen(PORT, "localhost", () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+});
 }
 
 startServer();
