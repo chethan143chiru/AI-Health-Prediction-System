@@ -122,8 +122,12 @@ export default function App() {
           {/* Profile is shared but usually specialized for the auth-ed user */}
           <Route path="/profile" element={user ? <Profile /> : <Navigate to="/auth" />} />
           
-          {/* Admin Route - Redirect Users to Home/Dashboard */}
-          <Route path="/admin" element={user?.role === 'admin' ? <Admin /> : <Navigate to="/" />} />
+          {/* Admin Route - Allow Admin or Super Admin access */}
+          <Route path="/admin" element={
+            user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'superadmin' || localStorage.getItem('health_ai_admin_auth') === 'true' 
+              ? <Admin user={user} onLogout={handleLogout} /> 
+              : <Navigate to="/auth" />
+          } />
           
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />

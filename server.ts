@@ -13,6 +13,17 @@ import twilio from 'twilio';
 import { initializeApp as initAdminApp, getApps as getAdminApps } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import crypto from 'crypto';
+import { GoogleGenAI } from '@google/genai';
+
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || '',
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build'
+    }
+  }
+});
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -702,7 +713,355 @@ async function startServer() {
     }
   });
 
-  // Example API for symptom prediction simulation (though we'll do GenAI on frontend usually)
+  // API Route: Advanced AI Disease Prediction (Explainable AI)
+  app.post('/api/ai/predict-disease', async (req, res) => {
+    try {
+      const { selectedSymptoms, userProfile, healthMetrics } = req.body;
+      if (!selectedSymptoms || !Array.isArray(selectedSymptoms) || selectedSymptoms.length === 0) {
+        return res.status(400).json({ error: "At least one symptom must be provided." });
+      }
+
+      const prompt = `You are a medical diagnostic AI engine.
+Analyze these selected symptoms: ${selectedSymptoms.join(', ')}.
+User Profile context: Age: ${userProfile?.age || 'Unknown'}, Gender: ${userProfile?.gender || 'Unknown'}, BMI: ${healthMetrics?.bmi || 'Unknown'}.
+
+Perform a detailed differential diagnosis and output ONLY valid JSON matching this schema exactly:
+{
+  "topDiseases": [
+    {
+      "disease": "Disease Name",
+      "probability": 85, // integer 0 to 100
+      "confidence": 90, // integer 0 to 100
+      "risk": "Low" | "Moderate" | "High" | "Critical",
+      "severity": "Mild" | "Moderate" | "Severe",
+      "confidenceExplanation": "High alignment due to presence of key pathognomonic symptoms."
+    }
+  ], // Provide top 5 to 7 potential conditions ordered by probability descending
+  "primaryDisease": "Top Disease Name",
+  "primaryRisk": "Low" | "Moderate" | "High" | "Critical",
+  "primaryProbability": 85,
+  "healthScore": 82, // Estimated overall health score 0 to 100 considering risk
+  "reasoningSummary": "Clinical reasoning explaining why the primary disease has highest probability given the symptom constellation.",
+  "contributingSymptoms": [
+    {
+      "symptom": "Symptom Name",
+      "contribution": "High" | "Medium" | "Low",
+      "importanceScore": 85
+    }
+  ],
+  "overview": "2-3 sentence clinical summary of the primary condition.",
+  "commonCauses": ["Cause 1", "Cause 2", "Cause 3"],
+  "preventionTips": ["Tip 1", "Tip 2", "Tip 3"],
+  "lifestyleSuggestions": ["Suggestion 1", "Suggestion 2", "Suggestion 3"],
+  "dietRecommendations": {
+    "foodsToInclude": ["Food 1", "Food 2", "Food 3"],
+    "foodsToLimit": ["Food 1", "Food 2", "Food 3"],
+    "hydrationTips": "Drink at least 2.5L water daily...",
+    "mealPlanSummary": "Balanced Mediterranean or light anti-inflammatory diet."
+  },
+  "exerciseRecommendations": {
+    "activities": ["Light walking 20 mins", "Deep breathing exercises"],
+    "frequency": "Daily or as tolerated",
+    "precautions": "Avoid intense strain during acute flareups."
+  },
+  "followUpAdvice": {
+    "monitoringTips": ["Monitor temperature twice daily", "Track symptom progression in app"],
+    "routineCheckup": "Schedule routine consult with Primary Care Physician within 3-5 days.",
+    "urgentWarningSigns": ["High fever (>103°F)", "Difficulty breathing", "Severe unremitting pain"]
+  }
+}`;
+
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          systemInstruction: 'You are an expert clinical AI diagnostic assistant. Return ONLY clean, valid JSON matching the requested schema. Do not add markdown backticks if possible.'
+        }
+      });
+
+      let cleanText = response.text || '{}';
+      cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedData = JSON.parse(cleanText);
+
+      return res.json({ success: true, data: parsedData });
+    } catch (err: any) {
+      console.error("Predict Disease Error:", err);
+      return res.status(500).json({ error: err.message || "Failed to generate AI diagnostic prediction." });
+    }
+  });
+
+  // API Route: AI Prescription Analyzer (OCR)
+  app.post('/api/ai/analyze-prescription', async (req, res) => {
+    try {
+      const { imageBase64, mimeType, fileName } = req.body;
+      if (!imageBase64) {
+        return res.status(400).json({ error: "Prescription image or document base64 data is required." });
+      }
+
+      const prompt = `You are a specialized medical OCR and pharmacology AI assistant.
+Analyze this medical prescription image or document.
+Extract all readable handwriting, printed text, doctor information, and prescribed medications.
+
+Output ONLY valid JSON matching this schema:
+{
+  "doctorName": "Dr. Full Name or 'Unspecified'",
+  "clinicName": "Clinic/Hospital Name or 'Unspecified'",
+  "dateDetected": "YYYY-MM-DD or 'Unspecified'",
+  "extractedText": "Complete raw extracted OCR text transcript from prescription",
+  "medicines": [
+    {
+      "id": "med-1",
+      "name": "Brand/Trade Name",
+      "genericName": "Generic Active Ingredient (e.g. Paracetamol)",
+      "purpose": "Condition treated (e.g. Pain & Fever relief)",
+      "dosage": "500 mg",
+      "timing": "Morning & Night (1-0-1)",
+      "relationToFood": "After Food",
+      "confidence": "High" | "Medium" | "Low",
+      "commonSideEffects": ["Mild nausea", "Drowsiness"],
+      "precautions": "Do not exceed recommended dose. Avoid alcohol.",
+      "storageGuidance": "Store in a cool dry place away from direct sunlight."
+    }
+  ],
+  "unreadableSections": ["Highlighted illegible handwriting lines or unclear dosage notes"],
+  "overallConfidence": "High" | "Medium" | "Low",
+  "generalSafetyGuidance": [
+    "Always verify dosages with a licensed pharmacist before consumption.",
+    "Keep all medications out of reach of children."
+  ]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [
+          {
+            inlineData: {
+              mimeType: mimeType || 'image/jpeg',
+              data: imageBase64.replace(/^data:image\/\w+;base64,/, '').replace(/^data:application\/pdf;base64,/, '')
+            }
+          },
+          prompt
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          systemInstruction: 'You are an accurate medical OCR vision system. Extract prescription details with precision. Return ONLY valid JSON.'
+        }
+      });
+
+      let cleanText = response.text || '{}';
+      cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedData = JSON.parse(cleanText);
+
+      return res.json({ success: true, data: parsedData });
+    } catch (err: any) {
+      console.error("Prescription OCR Error:", err);
+      return res.status(500).json({ error: err.message || "Failed to analyze prescription." });
+    }
+  });
+
+  // API Route: AI Medical Image Analyzer
+  app.post('/api/ai/analyze-medical-image', async (req, res) => {
+    try {
+      const { imageBase64, mimeType, imageType } = req.body;
+      if (!imageBase64) {
+        return res.status(400).json({ error: "Medical image base64 data is required." });
+      }
+
+      const prompt = `You are a radiological and clinical visual AI assistant.
+Analyze this medical image (Category: ${imageType || 'General Medical Scan'}).
+Evaluate image quality, visual patterns, structural features, and provide educational clinical findings.
+
+Output ONLY valid JSON matching this schema:
+{
+  "qualityCheck": {
+    "resolutionRating": "Good" | "Fair" | "Poor",
+    "contrastAdequacy": true,
+    "brightnessAdequacy": true,
+    "blurDetected": false,
+    "overallSuitable": true,
+    "qualityScore": 92
+  },
+  "confidenceLevel": "High" | "Moderate" | "Low",
+  "primaryInterpretation": "Clear, plain language clinical description of key visual findings.",
+  "plainLanguageExplanation": "Detailed educational explanation suitable for patient understanding.",
+  "possibleConditions": [
+    {
+      "condition": "Condition Name",
+      "relativeConfidence": 85,
+      "description": "Brief explanation of pattern correlation."
+    }
+  ],
+  "annotations": [
+    {
+      "id": "region-1",
+      "label": "Observed Area / Density",
+      "x": 45, // percentage 0 to 100 for box center X
+      "y": 40, // percentage 0 to 100 for box center Y
+      "width": 25, // percentage width
+      "height": 20, // percentage height
+      "confidence": 88,
+      "note": "Note regarding visual variation or feature"
+    }
+  ],
+  "generalHealthGuidance": [
+    "This AI visual analysis is for educational and screening assistance only.",
+    "Always consult a qualified radiologist or specialist for official diagnostic confirmation."
+  ]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [
+          {
+            inlineData: {
+              mimeType: mimeType || 'image/jpeg',
+              data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+            }
+          },
+          prompt
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          systemInstruction: 'You are a medical radiology visual AI assistant. Output ONLY valid JSON.'
+        }
+      });
+
+      let cleanText = response.text || '{}';
+      cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedData = JSON.parse(cleanText);
+
+      return res.json({ success: true, data: parsedData });
+    } catch (err: any) {
+      console.error("Medical Image Analysis Error:", err);
+      return res.status(500).json({ error: err.message || "Failed to analyze medical image." });
+    }
+  });
+
+  // API Route: AI Live Disease Detection (Camera)
+  app.post('/api/ai/live-disease-detection', async (req, res) => {
+    try {
+      const { imageBase64, mimeType, focusArea } = req.body;
+      if (!imageBase64) {
+        return res.status(400).json({ error: "Camera image capture base64 is required." });
+      }
+
+      const prompt = `You are a dermatology and surface clinical AI assistant.
+Analyze this live camera capture of a visible skin or external condition (User focus area: ${focusArea || 'General External'}).
+Perform quality assessment, feature identification, and educational analysis.
+
+Output ONLY valid JSON matching this schema:
+{
+  "conditionCategory": "${focusArea || 'Skin & External Condition'}",
+  "qualityCheck": {
+    "brightness": "Good" | "Poor",
+    "sharpness": "Good" | "Blurry",
+    "lighting": "Good" | "Dark",
+    "overallSuitable": true
+  },
+  "confidenceLevel": "High" | "Moderate" | "Low",
+  "observedFeatures": [
+    "Erythematous papules with mild scaling",
+    "Localized epidermal inflammation"
+  ],
+  "possibleConditions": [
+    {
+      "condition": "Condition Name (e.g., Contact Dermatitis / Acne Vulgaris / Eczema)",
+      "relativeConfidence": 80,
+      "overview": "Educational overview of the visible pattern."
+    }
+  ],
+  "annotations": [
+    {
+      "id": "ann-1",
+      "label": "Primary Lesion Area",
+      "x": 50,
+      "y": 48,
+      "width": 30,
+      "height": 30,
+      "confidence": 85,
+      "note": "Concentrated redness and localized skin irritation"
+    }
+  ],
+  "educationalExplanation": "Clear educational explanation of what is observed in the photo.",
+  "generalCareGuidance": [
+    "Keep the affected area clean and dry.",
+    "Avoid harsh soaps, scratching, or popping lesions.",
+    "Apply gentle hypoallergenic moisturizer if skin is dry."
+  ],
+  "urgentWarningSigns": [
+    "Rapidly spreading redness or warmth",
+    "Fever or systemic illness",
+    "Purulent discharge or severe worsening pain"
+  ]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [
+          {
+            inlineData: {
+              mimeType: mimeType || 'image/jpeg',
+              data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+            }
+          },
+          prompt
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+          systemInstruction: 'You are an educational visual dermatology AI assistant. Output ONLY valid JSON.'
+        }
+      });
+
+      let cleanText = response.text || '{}';
+      cleanText = cleanText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsedData = JSON.parse(cleanText);
+
+      return res.json({ success: true, data: parsedData });
+    } catch (err: any) {
+      console.error("Live Disease Detection Error:", err);
+      return res.status(500).json({ error: err.message || "Failed to analyze live camera image." });
+    }
+  });
+
+  // API Route: AI Health Assistant (Chatbot with health context)
+  app.post('/api/ai/health-assistant', async (req, res) => {
+    try {
+      const { message, healthContext, chatHistory } = req.body;
+      if (!message) {
+        return res.status(400).json({ error: "Message is required." });
+      }
+
+      const prompt = `You are Health Buddy, an empathetic, highly knowledgeable AI Health Assistant.
+User Profile: Name: ${healthContext?.userName || 'User'}, Age: ${healthContext?.age || 'N/A'}, Gender: ${healthContext?.gender || 'N/A'}, Health Score: ${healthContext?.healthScore || 85}/100.
+Latest Disease Prediction: ${healthContext?.latestPrediction || 'None'}.
+Latest Prescription Analyzed: ${healthContext?.latestPrescription || 'None'}.
+
+User Message: "${message}"
+
+Respond concisely, accurately, and empathetically in 2-4 sentences. Include a practical advice tip or question if appropriate. Avoid generic disclaimer spam, but maintain safe medical tone.`;
+
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+        config: {
+          temperature: 0.3,
+          systemInstruction: 'You are Health Buddy, a professional AI Medical Assistant. Give direct, empathetic, clear answers.'
+        }
+      });
+
+      return res.json({ success: true, text: response.text || "I am here to assist with your health questions." });
+    } catch (err: any) {
+      console.error("Health Assistant Chat Error:", err);
+      return res.status(500).json({ error: err.message || "Failed to generate chat response." });
+    }
+  });
+
+  // Example API for symptom prediction simulation
   app.post('/api/predict-disease-sim', (req, res) => {
     const { symptoms } = req.body;
     // This is just a placeholder for server-side logic if needed
