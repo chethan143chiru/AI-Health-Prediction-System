@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Phone, Mail, MapPin, User, ShieldCheck, Sparkles, Building2 } from 'lucide-react';
-import creatorImage from '../assets/images/creator_chethan_headshot_1780392097205.png';
+const creatorImage = "https://api.dicebear.com/7.x/avataaars/svg?seed=Chethan";
 
 export default function Contact() {
   const team = [
@@ -11,7 +11,7 @@ export default function Contact() {
       phone: "9900399845",
       city: "Pandavapura",
       email: "contact@health.ai",
-      image: creatorImage
+      image: "https://picsum.photos/seed/chethan/200/200"
     },
     {
       role: "AI & Research Visionary",
