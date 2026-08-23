@@ -8,12 +8,13 @@ import {
 export async function predictDiseaseAPI(
   selectedSymptoms: string[], 
   userProfile?: any, 
-  healthMetrics?: any
+  healthMetrics?: any,
+  enginePreference: 'auto' | 'ml' | 'gemini' = 'auto'
 ): Promise<DiseasePredictionResult> {
   const res = await fetch('/api/ai/predict-disease', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ selectedSymptoms, userProfile, healthMetrics })
+    body: JSON.stringify({ selectedSymptoms, userProfile, healthMetrics, enginePreference })
   });
 
   if (!res.ok) {
@@ -87,12 +88,14 @@ export async function liveDiseaseDetectionAPI(
 
 export async function chatHealthAssistantAPI(
   message: string, 
-  healthContext: any
-): Promise<string> {
+  healthContext: any,
+  conversationHistory?: any[],
+  enginePreference: 'auto' | 'gemini' | 'nlp' = 'auto'
+): Promise<{ text: string; engine?: string; engineLabel?: string }> {
   const res = await fetch('/api/ai/health-assistant', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, healthContext })
+    body: JSON.stringify({ message, healthContext, conversationHistory, enginePreference })
   });
 
   if (!res.ok) {
@@ -101,5 +104,9 @@ export async function chatHealthAssistantAPI(
   }
 
   const json = await res.json();
-  return json.text;
+  return {
+    text: json.text,
+    engine: json.engine,
+    engineLabel: json.engineLabel
+  };
 }

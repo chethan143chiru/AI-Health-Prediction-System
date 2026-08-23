@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { 
   AlertTriangle, CheckCircle2, TrendingUp, HeartPulse, 
-  Target, ShieldAlert, Sparkles, Download, Mail, MessageSquare
+  Target, ShieldAlert, Sparkles, Download, Mail
 } from 'lucide-react';
 import { 
   Chart as ChartJS, 
@@ -192,13 +192,6 @@ export default function PredictionResult({ data, onDownload }: { data: Predictio
               <Mail className="w-6 h-6 text-brand-primary" />
             </div>
             <span className="font-bold text-sm">Send to Registered Email</span>
-          </button>
-
-          <button className="flex-1 glass-card p-6 flex flex-col items-center justify-center gap-3 group active:scale-95 transition-all text-white/80 hover:text-white">
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
-              <MessageSquare className="w-6 h-6 text-emerald-400" />
-            </div>
-            <span className="font-bold text-sm">Send SMS Alert</span>
           </button>
         </div>
       </div>

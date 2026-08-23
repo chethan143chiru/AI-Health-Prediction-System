@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Bot, Send, Sparkles, User, Loader2, RefreshCw, Trash2, HeartPulse, Stethoscope 
+  Bot, Send, Sparkles, User, Loader2, RefreshCw, Trash2, HeartPulse, Stethoscope, Brain, Cpu 
 } from 'lucide-react';
 import { chatHealthAssistantAPI } from '@/src/lib/api';
 import { cn } from '@/src/lib/utils';
@@ -15,6 +15,8 @@ interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   text: string;
+  engine?: string;
+  engineLabel?: string;
   timestamp: string;
 }
 
@@ -34,12 +36,15 @@ export default function AIHealthAssistantModule({
     {
       id: 'welcome',
       sender: 'assistant',
-      text: `Hello ${userProfile?.name || 'there'}! I am your AI Health Companion. I have context over your vitals (BMI ${healthMetrics?.bmi || 'N/A'}, BP ${healthMetrics?.bloodPressureSystolic || '120'}/${healthMetrics?.bloodPressureDiastolic || '80'}) and latest diagnostic scans. How can I assist your health journey today?`,
+      text: `Hello ${userProfile?.name || 'there'}! I am your AI Health Companion. I have real-time context over your vitals (BMI ${healthMetrics?.bmi || 'N/A'}, BP ${healthMetrics?.bloodPressureSystolic || '120'}/${healthMetrics?.bloodPressureDiastolic || '80'}) and latest diagnostic history. How can I assist your health journey today?`,
+      engine: 'gemini_ai',
+      engineLabel: 'Gemini 3.7 Flash AI',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [enginePreference, setEnginePreference] = useState<'auto' | 'gemini' | 'nlp'>('auto');
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -68,12 +73,15 @@ export default function AIHealthAssistantModule({
         latestPrediction
       };
 
-      const replyText = await chatHealthAssistantAPI(query, healthContext);
+      const history = [...messages, userMsg].slice(-6);
+      const res = await chatHealthAssistantAPI(query, healthContext, history, enginePreference);
 
       const botMsg: ChatMessage = {
         id: `b-${Date.now()}`,
         sender: 'assistant',
-        text: replyText,
+        text: res.text,
+        engine: res.engine,
+        engineLabel: res.engineLabel,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
@@ -98,6 +106,8 @@ export default function AIHealthAssistantModule({
         id: 'welcome-reset',
         sender: 'assistant',
         text: `Conversation reset. How else can I help you, ${userProfile?.name || 'Patient'}?`,
+        engine: 'gemini_ai',
+        engineLabel: 'Gemini 3.7 Flash AI',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -107,27 +117,24 @@ export default function AIHealthAssistantModule({
     <div className="space-y-6 animate-in fade-in">
       
       {/* Header */}
-      <div className="rounded-3xl bg-slate-900 border border-white/10 p-6 shadow-2xl flex items-center justify-between">
+      <div className="rounded-3xl bg-slate-900 border border-white/10 p-6 shadow-2xl flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/30 text-teal-400">
             <Bot className="w-7 h-7" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-xl font-black text-white tracking-tight font-display">AI Health Buddy Assistant</h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-400 text-[10px] font-bold uppercase tracking-widest">
-                24/7 COMPANION
-              </span>
             </div>
             <p className="text-slate-400 text-xs mt-0.5">
-              Ask any medical question or request advice tailored to your active vitals & health records.
+              Ask any medical questions or request advice tailored to your active vitals & health records.
             </p>
           </div>
         </div>
 
         <button
           onClick={clearChat}
-          className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-red-400 transition-colors"
+          className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-red-400 transition-colors shrink-0"
           title="Clear Conversation"
         >
           <Trash2 className="w-4 h-4" />
@@ -173,7 +180,7 @@ export default function AIHealthAssistantModule({
               </div>
               <div className="p-4 rounded-3xl bg-slate-950/80 border border-white/10 text-teal-300 flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>AI Assistant is analyzing medical context...</span>
+                <span>Health Assistant is reasoning...</span>
               </div>
             </div>
           )}
@@ -198,7 +205,7 @@ export default function AIHealthAssistantModule({
         <div className="pt-3 border-t border-white/10 flex items-center gap-3">
           <input
             type="text"
-            placeholder="Type your health question (e.g. explain fever remedies)..."
+            placeholder="Type your health question (e.g. explain fever remedies, BP numbers)..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}

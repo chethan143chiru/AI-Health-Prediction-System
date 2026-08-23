@@ -3,11 +3,9 @@ import { motion } from 'motion/react';
 import { 
   CheckCircle2, Sparkles, BrainCircuit, ShieldCheck, 
   Target, HeartPulse, Microscope, Activity,
-  Phone, Mail, MapPin, ExternalLink, Globe, Database,
-  FileText, Download, BookOpen, Layers, Award
+  Phone, Mail, MapPin, ExternalLink, Globe, Database
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-import { generateProjectDocPDF } from '@/src/lib/generateProjectDocPDF';
 
 export default function About() {
   const features = [
@@ -146,64 +144,6 @@ export default function About() {
             <a href="https://www.google.com/maps/search/?api=1&query=Pandavapura" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-slate-400 hover:text-blue-500 transition-colors font-bold group">
                <MapPin className="w-4 h-4" /> India Development Hub <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100" />
             </a>
-         </div>
-      </section>
-
-      {/* Software Engineering Master Documentation (PDF Download) */}
-      <section className="glass-card p-10 md:p-12 border border-sky-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/40 relative overflow-hidden text-left space-y-8 shadow-2xl">
-         <div className="absolute top-0 right-0 -translate-y-6 translate-x-6 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-         
-         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
-            <div className="space-y-2 max-w-2xl">
-               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-[11px] font-black uppercase tracking-wider">
-                  <Award className="w-3.5 h-3.5" /> IEEE / Research Paper Style Documentation
-               </div>
-               <h2 className="text-3xl md:text-4xl font-black font-display text-white tracking-tight">
-                  Software Engineering Master Documentation
-               </h2>
-               <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-                  Download the complete, in-depth technical specification and architectural book for Health.ai. Formatted as an IEEE-style research paper detailing technology stack audit, file taxonomy, diagnostic pipelines, and security protocols.
-               </p>
-            </div>
-            
-            <button
-               onClick={generateProjectDocPDF}
-               className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-base shadow-lg shadow-sky-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer shrink-0"
-            >
-               <Download className="w-5 h-5" />
-               Download Project PDF
-            </button>
-         </div>
-
-         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-slate-300 text-xs font-mono">
-            <div className="flex items-center gap-3 p-3.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-               <BookOpen className="w-4 h-4 text-sky-400 shrink-0" />
-               <div>
-                  <div className="text-white font-bold">5 Sections</div>
-                  <div className="text-slate-500 text-[10px]">Comprehensive Paper</div>
-               </div>
-            </div>
-            <div className="flex items-center gap-3 p-3.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-               <Layers className="w-4 h-4 text-emerald-400 shrink-0" />
-               <div>
-                  <div className="text-white font-bold">38 Files Audited</div>
-                  <div className="text-slate-500 text-[10px]">Complete Workspace</div>
-               </div>
-            </div>
-            <div className="flex items-center gap-3 p-3.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-               <BrainCircuit className="w-4 h-4 text-purple-400 shrink-0" />
-               <div>
-                  <div className="text-white font-bold">XAI & Gemini 2.5</div>
-                  <div className="text-slate-500 text-[10px]">Multi-Modal Engine</div>
-               </div>
-            </div>
-            <div className="flex items-center gap-3 p-3.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-               <FileText className="w-4 h-4 text-amber-400 shrink-0" />
-               <div>
-                  <div className="text-white font-bold">High-Res Vector PDF</div>
-                  <div className="text-slate-500 text-[10px]">Instant Download</div>
-               </div>
-            </div>
          </div>
       </section>
     </div>

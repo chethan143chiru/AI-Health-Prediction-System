@@ -50,47 +50,55 @@ export default function Profile() {
       if (activeUser) {
         const uid = activeUser.uid || activeUser.id;
         setProfilePhoto(activeUser.photoURL || activeUser.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`);
-        const userDoc = await getDoc(doc(db, 'users', uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          const storedDob = data.dob || "";
-          let finalAge = data.age || "";
-          let ageChanged = false;
+        
+        // Populate initial data from cached active user
+        setFormData(prev => ({
+          ...prev,
+          name: activeUser.displayName || activeUser.name || "",
+          email: activeUser.email || "",
+          mobile: activeUser.phoneNumber || activeUser.mobile || ""
+        }));
 
-          if (storedDob) {
-            const calculated = calculateAge(storedDob).toString();
-            if (calculated !== data.age) {
-              finalAge = calculated;
-              ageChanged = true;
+        try {
+          const userDoc = await getDoc(doc(db, 'users', uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            const storedDob = data.dob || "";
+            let finalAge = data.age || "";
+            let ageChanged = false;
+
+            if (storedDob) {
+              const calculated = calculateAge(storedDob).toString();
+              if (calculated !== data.age) {
+                finalAge = calculated;
+                ageChanged = true;
+              }
             }
-          }
 
-          setFormData({
-            name: data.name || activeUser.displayName || activeUser.name || "",
-            email: data.email || activeUser.email || "",
-            mobile: data.mobile || activeUser.phoneNumber || activeUser.mobile || "",
-            gender: data.gender || "Male",
-            dob: storedDob,
-            age: finalAge,
-            address: data.address || "",
-            bloodGroup: data.bloodGroup || "O+",
-            allergies: data.allergies || "N/A"
-          });
+            setFormData({
+              name: data.name || activeUser.displayName || activeUser.name || "",
+              email: data.email || activeUser.email || "",
+              mobile: data.mobile || activeUser.phoneNumber || activeUser.mobile || "",
+              gender: data.gender || "Male",
+              dob: storedDob,
+              age: finalAge,
+              address: data.address || "",
+              bloodGroup: data.bloodGroup || "O+",
+              allergies: data.allergies || "N/A"
+            });
 
-          if (data.photo) setProfilePhoto(data.photo);
+            if (data.photo) setProfilePhoto(data.photo);
 
-          // If age changed on their birthday, update the doc!
-          if (ageChanged) {
-            try {
-              await updateDoc(doc(db, 'users', uid), {
+            // If age changed on their birthday, update the doc
+            if (ageChanged) {
+              updateDoc(doc(db, 'users', uid), {
                 age: finalAge,
                 updatedAt: serverTimestamp()
-              });
-              console.log("Automatically updated age to", finalAge, "on birthday.");
-            } catch (err) {
-              console.warn("Could not automatically update birthday:", err);
+              }).catch(err => console.warn("Birthday age update notice:", err));
             }
           }
+        } catch (docErr) {
+          console.warn("Profile document fetch notice (offline/fallback):", docErr);
         }
       }
       setFetching(false);
@@ -147,21 +155,44 @@ export default function Profile() {
     const uid = activeUser.uid || activeUser.id;
 
     try {
-      await updateDoc(doc(db, 'users', uid), {
-        ...formData,
-        photo: profilePhoto,
-        updatedAt: serverTimestamp()
-      });
-      
+      // 1. Update local storage session
+      if (bypassUser) {
+        const updatedLocal = {
+          ...bypassUser,
+          name: formData.name || bypassUser.name,
+          email: formData.email || bypassUser.email,
+          mobile: formData.mobile,
+          gender: formData.gender,
+          dob: formData.dob,
+          age: formData.age,
+          address: formData.address,
+          photo: profilePhoto
+        };
+        localStorage.setItem('authBypassUser', JSON.stringify(updatedLocal));
+      }
+
+      // 2. Update Firebase Auth display name if available
       if (fbUser) {
         await updateProfile(fbUser, {
           displayName: formData.name,
           photoURL: profilePhoto
+        }).catch(() => {});
+      }
+
+      // 3. Persist to Firestore
+      try {
+        await updateDoc(doc(db, 'users', uid), {
+          ...formData,
+          photo: profilePhoto,
+          updatedAt: serverTimestamp()
         });
+      } catch (dbErr) {
+        console.warn("Firestore profile save notice (offline fallback):", dbErr);
       }
 
       const uName = formData.name || activeUser.displayName || activeUser.name || 'User';
-      await logUserActivity(uid, uName, 'profile_update', 'Updated personal details and medical context parameters');
+      logUserActivity(uid, uName, 'profile_update', 'Updated personal details and medical context parameters')
+        .catch(() => {});
 
       alert("Profile updated successfully!");
     } catch (err) {
@@ -173,6 +204,9 @@ export default function Profile() {
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem('authBypassUser');
+    localStorage.removeItem('health_ai_admin_auth');
+    sessionStorage.clear();
     try {
       const fbUser = auth.currentUser;
       const bypassUserStr = localStorage.getItem('authBypassUser');
@@ -181,13 +215,13 @@ export default function Profile() {
       if (activeUser) {
         const uid = activeUser.uid || activeUser.id;
         const uName = activeUser.displayName || activeUser.name || formData.name || 'User';
-        await logUserActivity(uid, uName, 'logout', 'User explicitly logged out of session');
+        await logUserActivity(uid, uName, 'logout', 'User explicitly logged out of session').catch(() => {});
       }
-      await signOut(auth);
-      localStorage.removeItem('authBypassUser');
-      window.location.href = '/';
+      await signOut(auth).catch(() => {});
     } catch (err) {
       console.error("Logout failed:", err);
+    } finally {
+      window.location.replace('/');
     }
   };
 

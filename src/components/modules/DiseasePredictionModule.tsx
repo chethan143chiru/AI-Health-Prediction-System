@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Stethoscope, Search, X, Check, Loader2, Sparkles, Download, ShieldAlert, Heart, Activity, 
-  HelpCircle, AlertTriangle, ArrowRight, RefreshCw, Layers 
+  HelpCircle, AlertTriangle, ArrowRight, RefreshCw, Layers, Cpu, Brain, Plus 
 } from 'lucide-react';
 import { SYMPTOM_CATEGORIES, MASTER_SYMPTOMS, searchSymptoms } from '@/src/data/symptoms_library';
 import { DiseasePredictionResult } from '@/src/types/health';
@@ -26,10 +26,10 @@ export default function DiseasePredictionModule({
 }: DiseasePredictionModuleProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [customSymptomInput, setCustomSymptomInput] = useState('');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>(
     preselectedSymptom ? [preselectedSymptom] : []
   );
-
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('Initializing diagnostic model...');
   const [predictionResult, setPredictionResult] = useState<DiseasePredictionResult | null>(null);
@@ -40,6 +40,15 @@ export default function DiseasePredictionModule({
     setSelectedSymptoms(prev =>
       prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
     );
+  };
+
+  const handleAddCustomSymptom = () => {
+    const trimmed = customSymptomInput.trim();
+    if (!trimmed) return;
+    if (!selectedSymptoms.includes(trimmed)) {
+      setSelectedSymptoms(prev => [...prev, trimmed]);
+    }
+    setCustomSymptomInput('');
   };
 
   const clearAllSymptoms = () => setSelectedSymptoms([]);
@@ -59,7 +68,7 @@ export default function DiseasePredictionModule({
     const interval = setInterval(() => {
       setLoadingStep(steps[idx % steps.length]);
       idx++;
-    }, 1200);
+    }, 1100);
 
     try {
       const result = await predictDiseaseAPI(selectedSymptoms, userProfile, healthMetrics);
@@ -80,6 +89,7 @@ export default function DiseasePredictionModule({
         await addDoc(collection(db, 'predictions'), {
           userId: activeUser.uid || activeUser.id,
           symptoms: selectedSymptoms,
+          engineUsed: result.engineUsed || 'local_ml',
           result: result,
           createdAt: serverTimestamp()
         }).catch(err => console.warn("Firestore save warning:", err));
@@ -103,20 +113,19 @@ export default function DiseasePredictionModule({
       
       {/* Module Header */}
       <div className="rounded-3xl bg-slate-900 border border-white/10 p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="flex items-center gap-4">
-          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-            <Stethoscope className="w-7 h-7" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-black text-white tracking-tight font-display">AI Disease Prediction</h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-widest">
-                EXPLAINABLE AI 2.0
-              </span>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+              <Stethoscope className="w-7 h-7" />
             </div>
-            <p className="text-slate-400 text-xs mt-1">
-              Select symptoms from 15 clinical organ categories to generate differential probability & reasoning.
-            </p>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-2xl font-black text-white tracking-tight font-display">AI Disease Prediction</h2>
+              </div>
+              <p className="text-slate-400 text-xs mt-1">
+                Clinical diagnostic differential analysis powered by intelligent symptom mapping and Explainable AI reasoning.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -159,6 +168,31 @@ export default function DiseasePredictionModule({
               </div>
             )}
 
+            {/* Custom Symptom Input (For custom or out-of-dataset symptoms) */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Type custom symptom..."
+                value={customSymptomInput}
+                onChange={(e) => setCustomSymptomInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomSymptom();
+                  }
+                }}
+                className="flex-1 bg-slate-950/80 border border-white/10 rounded-2xl py-2 px-3 text-xs text-white placeholder:text-slate-500 outline-none focus:border-emerald-500/50 transition-all"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomSymptom}
+                disabled={!customSymptomInput.trim()}
+                className="px-3 py-2 rounded-2xl bg-white/10 hover:bg-emerald-500/20 border border-white/10 hover:border-emerald-500/30 text-xs font-bold text-slate-200 hover:text-emerald-300 disabled:opacity-40 transition-all flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add
+              </button>
+            </div>
+
             {/* Search Input */}
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -180,7 +214,7 @@ export default function DiseasePredictionModule({
                   selectedCategory === 'All' ? "bg-emerald-500 text-slate-950" : "bg-white/5 text-slate-400 hover:text-white"
                 )}
               >
-                All (550+)
+                All Symptoms
               </button>
               {SYMPTOM_CATEGORIES.map(cat => (
                 <button
@@ -200,7 +234,7 @@ export default function DiseasePredictionModule({
             <div className="max-h-96 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
               {filteredSymptoms.length === 0 ? (
                 <div className="py-8 text-center text-slate-500 text-xs">
-                  No symptoms match your search.
+                  No symptoms match your search. You can add it above as a custom symptom!
                 </div>
               ) : (
                 filteredSymptoms.map(s => {
@@ -251,7 +285,7 @@ export default function DiseasePredictionModule({
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  <span>Run Explainable Diagnostic</span>
+                  <span>Run Diagnostic</span>
                 </>
               )}
             </button>
@@ -268,10 +302,12 @@ export default function DiseasePredictionModule({
               <div className="rounded-3xl bg-slate-900 border border-white/10 p-6 sm:p-8 shadow-2xl relative overflow-hidden">
                 <div className="flex items-start justify-between gap-4 mb-6">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                      PRIMARY DIFFERENTIAL MATCH
-                    </span>
-                    <h3 className="text-3xl font-black text-white font-display mt-2">{predictionResult.primaryDisease}</h3>
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                        PRIMARY DIFFERENTIAL MATCH
+                      </span>
+                    </div>
+                    <h3 className="text-3xl font-black text-white font-display">{predictionResult.primaryDisease}</h3>
                   </div>
 
                   <button
@@ -413,7 +449,7 @@ export default function DiseasePredictionModule({
               </div>
               <h3 className="text-xl font-black text-white uppercase tracking-tight font-display">Awaiting Symptom Input</h3>
               <p className="text-slate-400 text-xs max-w-sm leading-relaxed">
-                Select one or more symptoms from the left panel to execute our multi-organ Explainable AI diagnosis engine.
+                Select symptoms or enter custom signs to execute our Kaggle ML model & Gemini 3.7 Flash diagnostic reasoning.
               </p>
             </div>
           )}

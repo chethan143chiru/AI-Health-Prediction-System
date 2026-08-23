@@ -26,6 +26,8 @@ export interface SymptomContribution {
 export interface DiseasePredictionResult {
   id: string;
   createdAt: string;
+  engineUsed?: 'local_ml' | 'gemini_ai' | 'hybrid';
+  engineLabel?: string;
   topDiseases: DiseaseProbability[];
   primaryDisease: string;
   primaryRisk: RiskLevel;

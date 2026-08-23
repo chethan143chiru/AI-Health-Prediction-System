@@ -174,6 +174,16 @@ export default function SuperAdminHeader({
               <Settings className="w-4 h-4" />
             </button>
 
+            {/* Direct Admin Logout Button */}
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 hover:text-rose-300 text-xs font-bold transition-all shadow-sm group"
+              title="Sign Out of Admin Session"
+            >
+              <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+
             {/* Admin Profile Dropdown */}
             <div className="relative">
               <button

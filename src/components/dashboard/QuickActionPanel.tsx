@@ -67,17 +67,6 @@ export default function QuickActionPanel({ activeModule, setActiveModule }: Quic
       badge: 'BIOMETRICS'
     },
     {
-      id: 'assistant',
-      title: 'AI Health Buddy',
-      subtitle: '24/7 Medical Companion',
-      description: 'Conversational assistant with context over your health records.',
-      icon: Bot,
-      color: 'teal',
-      bgGradient: 'from-teal-500/10 via-cyan-500/5 to-transparent',
-      borderColor: 'border-teal-500/30',
-      badge: 'CHATBOT'
-    },
-    {
       id: 'history',
       title: 'Reports & History',
       subtitle: 'Centralized Records Hub',
@@ -109,7 +98,7 @@ export default function QuickActionPanel({ activeModule, setActiveModule }: Quic
           <p className="text-slate-400 text-xs">Select any specialized tool to begin intelligent diagnostic analysis</p>
         </div>
         <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5" /> 8 Active AI Engines
+          <Sparkles className="w-3.5 h-3.5" /> 7 Active AI Engines
         </span>
       </div>
 

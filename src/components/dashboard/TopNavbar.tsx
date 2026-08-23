@@ -52,7 +52,6 @@ export default function TopNavbar({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl font-black tracking-tight text-white font-display">HEALTH.<span className="text-emerald-400">AI</span></span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-widest hidden sm:inline-block">V2.0 PRO</span>
             </div>
             <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider hidden sm:block">AI Health Prediction System</p>
           </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Menu, X, Heart, LayoutDashboard, History, User, 
+  Menu, X, Heart, LayoutDashboard, History, User, Users,
   LogOut, Phone, Info, Home as HomeIcon, ShieldCheck, BookOpen
 } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
@@ -23,7 +23,7 @@ export default function Layout({ children, user, onLogout }: { children: React.R
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = user ? [] : [
+  const navLinks = [
     { name: 'Home', path: '/', icon: HomeIcon },
     { name: 'About', path: '/about', icon: Info },
     { name: 'Contact', path: '/contact', icon: Phone },
@@ -31,16 +31,18 @@ export default function Layout({ children, user, onLogout }: { children: React.R
 
   const authLinks = [];
   if (user) {
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 'superadmin' || user.role === 'super_admin') {
       authLinks.push({ name: 'Admin Panel', path: '/admin', icon: ShieldCheck });
     } else {
       authLinks.push(
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { name: 'History', path: '/history', icon: History },
         { name: 'Profile', path: '/profile', icon: User }
       );
     }
   }
+
+  // Check if current route is Dashboard or Admin panel (which have their own dedicated TopNavbar)
+  const isDashboardOrAdmin = location.pathname === '/dashboard' || location.pathname === '/admin';
 
   // Theme Sync Logic
   const [themeColor, setThemeColor] = useState(() => localStorage.getItem('themeColor') || '#3b82f6');
@@ -78,86 +80,88 @@ export default function Layout({ children, user, onLogout }: { children: React.R
         />
       </div>
 
-      {/* Navbar */}
-      <nav className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
-        isScrolled ? "py-4 bg-slate-900/40 backdrop-blur-xl border-b border-white/5" : "py-6 bg-transparent"
-      )}>
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div 
-              className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-transform group-hover:scale-110"
-              style={{ backgroundColor: themeColor, boxShadow: `0 0 20px ${themeColor}40` }}
-            >
-              <span className="text-white font-bold text-xs">H+</span>
-            </div>
-            <span className="text-xl font-bold tracking-tight font-display">Health.ai</span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium">
-            {[...navLinks, ...authLinks].map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className="transition-colors duration-300"
-                style={{ color: location.pathname === link.path ? themeColor : 'inherit' }}
+      {/* Navbar (Only rendered on public pages, hidden on Dashboard and Admin Panel) */}
+      {!isDashboardOrAdmin && (
+        <nav className={cn(
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+          isScrolled ? "py-4 bg-slate-900/40 backdrop-blur-xl border-b border-white/5" : "py-6 bg-transparent"
+        )}>
+          <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div 
+                className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-transform group-hover:scale-110"
+                style={{ backgroundColor: themeColor, boxShadow: `0 0 20px ${themeColor}40` }}
               >
-                {link.name}
-              </Link>
-            ))}
-          </div>
+                <span className="text-white font-bold text-xs">H+</span>
+              </div>
+              <span className="text-xl font-bold tracking-tight font-display">Health.ai</span>
+            </Link>
 
-          <div className="hidden md:flex items-center gap-6">
-            {/* Color Palette Switcher */}
-            <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-full border border-white/10">
-              {colors.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => setThemeColor(c.value)}
-                  className={cn(
-                    "w-5 h-5 rounded-full transition-all hover:scale-125",
-                    themeColor === c.value ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110" : ""
-                  )}
-                  style={{ backgroundColor: c.value }}
-                  title={c.name}
-                />
+            {/* Desktop Nav */}
+            <div className="hidden md:flex items-center gap-8 text-sm font-medium">
+              {[...navLinks, ...authLinks].map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className="transition-colors duration-300"
+                  style={{ color: location.pathname === link.path ? themeColor : 'inherit' }}
+                >
+                  {link.name}
+                </Link>
               ))}
             </div>
 
-            {user ? (
-              <div className="flex items-center gap-4 border-l border-white/10 pl-6">
-                <div className="flex flex-col items-end">
-                  <span className="text-xs font-semibold">{user.name}</span>
-                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{user.role === 'admin' ? 'SYSTEM ADMIN' : 'PRO USER'}</span>
-                </div>
-                <Link to="/profile" className="w-10 h-10 rounded-full border-2 p-0.5 bg-slate-800 hover:scale-105 transition-transform overflow-hidden" style={{ borderColor: themeColor }}>
-                   <img src={user.photo || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} className="w-full h-full rounded-full" alt="Avatar" />
-                </Link>
-                <button 
-                  onClick={onLogout}
-                  className="p-2 hover:text-red-400 transition-colors"
-                  title="Logout"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
+            <div className="hidden md:flex items-center gap-6">
+              {/* Color Palette Switcher */}
+              <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-full border border-white/10">
+                {colors.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => setThemeColor(c.value)}
+                    className={cn(
+                      "w-5 h-5 rounded-full transition-all hover:scale-125",
+                      themeColor === c.value ? "ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110" : ""
+                    )}
+                    style={{ backgroundColor: c.value }}
+                    title={c.name}
+                  />
+                ))}
               </div>
-            ) : (
-              <Link to="/auth" className="px-6 py-2.5 text-white rounded-xl text-sm font-bold transition-all shadow-xl hover:-translate-y-0.5 active:translate-y-0" style={{ backgroundColor: themeColor, boxShadow: `0 10px 20px ${themeColor}30` }}>
-                Sign In
-              </Link>
-            )}
-          </div>
 
-          <button className="md:hidden p-2 text-white/80" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            {isMobileMenuOpen ? <X /> : <Menu />}
-          </button>
-        </div>
-      </nav>
+              {user ? (
+                <div className="flex items-center gap-4 border-l border-white/10 pl-6">
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs font-semibold">{user.name}</span>
+                    <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{user.role === 'admin' ? 'SYSTEM ADMIN' : 'PRO USER'}</span>
+                  </div>
+                  <Link to="/profile" className="w-10 h-10 rounded-full border-2 p-0.5 bg-slate-800 hover:scale-105 transition-transform overflow-hidden" style={{ borderColor: themeColor }}>
+                     <img src={user.photo || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} className="w-full h-full rounded-full" alt="Avatar" />
+                  </Link>
+                  <button 
+                    onClick={onLogout}
+                    className="p-2 hover:text-red-400 transition-colors"
+                    title="Logout"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <Link to="/auth" className="px-6 py-2.5 text-white rounded-xl text-sm font-bold transition-all shadow-xl hover:-translate-y-0.5 active:translate-y-0" style={{ backgroundColor: themeColor, boxShadow: `0 10px 20px ${themeColor}30` }}>
+                  Sign In
+                </Link>
+              )}
+            </div>
+
+            <button className="md:hidden p-2 text-white/80" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              {isMobileMenuOpen ? <X /> : <Menu />}
+            </button>
+          </div>
+        </nav>
+      )}
 
       {/* Mobile Menu */}
       <AnimatePresence>
-        {isMobileMenuOpen && (
+        {!isDashboardOrAdmin && isMobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -187,7 +191,7 @@ export default function Layout({ children, user, onLogout }: { children: React.R
         )}
       </AnimatePresence>
 
-      <main className="pt-24 pb-20">
+      <main className={cn("pb-20", isDashboardOrAdmin ? "pt-0" : "pt-24")}>
         {children}
       </main>
 

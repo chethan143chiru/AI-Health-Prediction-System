@@ -89,10 +89,20 @@ export default function Admin({ user: propsUser, onLogout: propsOnLogout }: Admi
     setUsersState(prev => prev.filter(u => u.id !== userId));
   };
 
-  const handleLogoutAdmin = () => {
+  const handleLogoutAdmin = async () => {
     localStorage.removeItem('health_ai_admin_auth');
-    if (propsOnLogout) propsOnLogout();
-    navigate('/auth');
+    localStorage.removeItem('authBypassUser');
+    sessionStorage.clear();
+    
+    if (propsOnLogout) {
+      await propsOnLogout();
+    } else {
+      try {
+        await signOut(auth).catch(() => {});
+      } finally {
+        window.location.replace('/');
+      }
+    }
   };
 
   return (

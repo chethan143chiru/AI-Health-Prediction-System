@@ -21,6 +21,7 @@ import { UserHealthMetrics, HealthNotification } from '@/src/types/health';
 import { auth, db } from '@/src/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import { logUserActivity } from '@/src/lib/activity';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 
 export default function Dashboard() {
@@ -57,8 +58,8 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState<HealthNotification[]>([
     {
       id: 'n1',
-      title: 'Welcome to HEALTH.AI V2.0 Pro',
-      message: 'Your AI Patient Workspace is active with 8 specialized diagnostic engines.',
+      title: 'Welcome to HEALTH.AI',
+      message: 'Your AI Patient Workspace is active with comprehensive diagnostic tools.',
       timestamp: 'Just now',
       isRead: false,
       type: 'system'
@@ -106,9 +107,21 @@ export default function Dashboard() {
   }, []);
 
   const handleLogout = async () => {
-    await signOut(auth).catch(() => {});
     localStorage.removeItem('authBypassUser');
-    navigate('/auth');
+    localStorage.removeItem('health_ai_admin_auth');
+    sessionStorage.clear();
+    try {
+      if (user) {
+        const uid = user.uid || user.id;
+        const name = user.displayName || user.name || 'User';
+        await logUserActivity(uid, name, 'logout', 'User explicitly signed out of the dashboard session').catch(() => {});
+      }
+      await signOut(auth).catch(() => {});
+    } catch (e) {
+      console.warn("Logout notice:", e);
+    } finally {
+      window.location.replace('/');
+    }
   };
 
   const handleMarkNotificationRead = (id: string) => {
